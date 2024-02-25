@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>index</title>
+        <script>
+            // 添加事件监听器以处理表单提交
+            window.onload = function() {
+                document.getElementById('loginForm').addEventListener('submit', function(event) {
+                    event.preventDefault(); // 阻止表单的默认提交行为
+                    console.log('frontend');
+                    // 获取表单数据
+                    const formData = {
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    };
+
+                    // 发送fetch请求到登录端点
+                    fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('data');
+                        console.log(data);
+                        if (data.token && data.redirectUrl) {
+                            // 存储JWT，然后重定向
+                            localStorage.setItem('token', data.token);
+                            localStorage.setItem('name', data.username);
+                            const token = localStorage.getItem('token');
+                            // window.location.href = data.redirectUrl;
+                            fetch('/protected', {
+                                method: 'get',
+                                headers: {
+                                    'Authorization': 'Bearer ' + token
+                                }
+                            })
+                            .then(response => {
+                                if(response.ok) {
+                                    return response.text(); // 或者response.json()，取决于你的服务器响应类型
+                                } else {
+                                    throw new Error('Failed to access protected route');
+                                }
+                            })
+                            .then(content => {
+                                // 处理受保护路由的内容
+                                console.log(content);
+                                // document.documentElement.innerHTML = content;
+                                document.write(content);
+                                document.close();
+                            })
+                            .catch(error => console.error('Error:', error));
+                        } else {
+                            // 处理登录失败的情况
+                            alert('Login failed');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            };
+            
+        </script>
+    </head>
+    <body>
+        <h1>welcome user</h1>
+        <!-- 添加id以便可以在JS中引用表单和输入 -->
+        <form id="loginForm">
+            <input type="text" id="username" name="username" placeholder="username">
+            <input type="password" id="password" name="password" placeholder="password">
+            <input type="submit" value="login">
+        </form>
+    </body>
+</html>
