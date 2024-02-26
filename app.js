@@ -134,16 +134,25 @@ app.post('/upload', passport.authenticate('jwt', {session: false}) , upload.sing
     res.send('upload success');
 })
 
-app.get('/all_photo', (req, res, next) => {
+app.get('/get_photo', (req, res, next) => {
     const uploadDir = path.join(__dirname, 'uploads');
-
+    const user_picture = {'picture': [], 'user': []};
     fs.readdir(uploadDir, (err, files)=>{
         if (err) return res.status(400).send('error');
-        files.forEach(file => console.log(file));
+        files.forEach(file => {
+            const picture_url = path.join(__dirname, 'uploads', file);
+            console.log(picture_url);
+            user_picture['picture'].push('/uploads/' + file);
+            user_picture['user'].push(file.split('-')[0]); 
+            console.log(file.split('-')[0])
+        });
+        res.status(200).send(user_picture);
     })
-
-    res.status(200).send('success');
 });
+
+app.get('/all_photo', (req, res, next)=>{
+    res.sendFile(__dirname+'/html/photo.html');
+})
 
 app.listen(PORT, () =>{
     console.log('listening');

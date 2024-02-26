@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>photo</title>
+    </head>
+    <body>
+
+    </body>
+    <script>
+        fetch('/get_photo')
+        .then(res => res.json())
+        .then(data => {
+            console.log(data);
+            data['picture'].forEach(pic => {
+                const block = document.createElement('div');
+                block.style.display = 'flex';
+                block.style.justifyContent = 'center';
+                block.style.alignItems = 'center';
+                document.body.appendChild(block);
+                // console.log(pic);
+                const img = document.createElement('img');
+                img.src = pic;
+                img.style.width = '800px';
+                img.style.height = '600px';
+                img.style.margin = '10px';
+                block.appendChild(img);
+                const name = document.createElement('h1');
+                // console.log(pic.split('-')[0].split('/')[1]);
+                name.innerText = pic.split('-')[0].split('/')[2];
+                block.appendChild(name);
+            });
+
+        });
+    </script>
+</html>
