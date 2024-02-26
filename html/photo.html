@@ -4,14 +4,37 @@
         <title>photo</title>
     </head>
     <body>
-
+        <button onclick=update()>update</button>
     </body>
     <script>
-        fetch('/get_photo')
-        .then(res => res.json())
-        .then(data => {
-            console.log(data);
-            data['picture'].forEach(pic => {
+        // 舊版本，去資料夾裡找
+        // fetch('/get_photo')
+        // .then(res => res.json())
+        // .then(data => {
+        //     console.log(data);
+        //     data['picture'].forEach(pic => {
+        //         const block = document.createElement('div');
+        //         block.style.display = 'flex';
+        //         block.style.justifyContent = 'center';
+        //         block.style.alignItems = 'center';
+        //         document.body.appendChild(block);
+        //         // console.log(pic);
+        //         const img = document.createElement('img');
+        //         img.src = pic;
+        //         img.style.width = '800px';
+        //         img.style.height = '600px';
+        //         img.style.margin = '10px';
+        //         block.appendChild(img);
+        //         const name = document.createElement('h1');
+        //         // console.log(pic.split('-')[0].split('/')[1]);
+        //         name.innerText = pic.split('-')[0].split('/')[2];
+        //         block.appendChild(name);
+        //     });
+        // });
+
+        // 新版本，去資料庫找
+        const construct = (data) =>{
+            data.forEach(element => {
                 const block = document.createElement('div');
                 block.style.display = 'flex';
                 block.style.justifyContent = 'center';
@@ -19,17 +42,62 @@
                 document.body.appendChild(block);
                 // console.log(pic);
                 const img = document.createElement('img');
-                img.src = pic;
+                img.src = '/uploads/' + element['link'];
                 img.style.width = '800px';
                 img.style.height = '600px';
                 img.style.margin = '10px';
                 block.appendChild(img);
                 const name = document.createElement('h1');
                 // console.log(pic.split('-')[0].split('/')[1]);
-                name.innerText = pic.split('-')[0].split('/')[2];
+                name.innerText = element['owner'] + '\nlike: ' + element['like_num'];
                 block.appendChild(name);
-            });
+                const like = document.createElement('button');
+                like.innerText = 'like';
+                block.appendChild(like);
+                like.addEventListener('click', async () => {
+                    fetch('/like/' + element['id'])
+                    .then(res => {
 
-        });
+                        console.log('res');
+                        console.log(res.ok);
+                        if (res.ok){
+                            localStorage.data = 'false';
+                            update();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('There has been a problem with your fetch operation:', error);
+                    });
+                });
+            });
+        }
+
+
+        if (localStorage.data != 'false'){
+            console.log('localStorage');
+            console.log(JSON.parse(localStorage.data));
+            construct(JSON.parse(localStorage.data));
+        }
+        else {
+            fetch('/get_photo')
+            .then(res => res.json())
+            .then(data => {
+                localStorage.data = JSON.stringify(data);
+                console.log('data');
+                console.log(data);
+                construct(data);
+            })
+        }
+
+        const update = async() => {
+            fetch('/get_photo')
+            .then(res => res.json())
+            .then(data => {
+                localStorage.data = JSON.stringify(data);
+                console.log('data');
+                console.log(data);
+                location.reload();
+            })
+        }
     </script>
 </html>

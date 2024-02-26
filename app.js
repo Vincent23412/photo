@@ -124,6 +124,7 @@ const storage = multer.diskStorage({
     filename: (req, file, cb) =>{
         console.log('storage');
         console.log(req.user);
+        req.link = req.user.name + '-' + file.fieldname + '-' + Date.now() + file.originalname;
         cb(null, req.user.name + '-' + file.fieldname + '-' + Date.now() + file.originalname);
     }
 })
@@ -131,27 +132,49 @@ const storage = multer.diskStorage({
 const upload = multer({storage: storage});
 
 app.post('/upload', passport.authenticate('jwt', {session: false}) , upload.single('file'), (req, res, next)=>{
-    res.send('upload success');
+    // res.send('upload success');
+    // console.log(req.user, req.link);
+    pool.query('INSERT INTO photo (owner, like_num, link) values ($1, $2, $3);', [req.user.name, 0, req.link],(err, results) =>{
+        if (err) return res.status(200).send('error');
+        res.redirect('/all_photo');
+
+    })
 })
 
 app.get('/get_photo', (req, res, next) => {
-    const uploadDir = path.join(__dirname, 'uploads');
-    const user_picture = {'picture': [], 'user': []};
-    fs.readdir(uploadDir, (err, files)=>{
-        if (err) return res.status(400).send('error');
-        files.forEach(file => {
-            const picture_url = path.join(__dirname, 'uploads', file);
-            console.log(picture_url);
-            user_picture['picture'].push('/uploads/' + file);
-            user_picture['user'].push(file.split('-')[0]); 
-            console.log(file.split('-')[0])
-        });
-        res.status(200).send(user_picture);
+    // 舊版本，去資料夾裡找
+    // const uploadDir = path.join(__dirname, 'uploads');
+    // const user_picture = {'picture': [], 'user': []};
+    // fs.readdir(uploadDir, (err, files)=>{
+    //     if (err) return res.status(400).send('error');
+    //     files.forEach(file => {
+    //         const picture_url = path.join(__dirname, 'uploads', file);
+    //         console.log(picture_url);
+    //         user_picture['picture'].push('/uploads/' + file);
+    //         user_picture['user'].push(file.split('-')[0]); 
+    //         console.log(file.split('-')[0])
+    //     });
+    //     res.status(200).send(user_picture);
+    // })
+
+    // 去資料庫裡找
+    pool.query('SELECT * FROM photo', (err, results) =>{
+        // console.log(results.rows);
+        res.status(200).send(results.rows);
     })
 });
 
 app.get('/all_photo', (req, res, next)=>{
     res.sendFile(__dirname+'/html/photo.html');
+})
+
+app.get('/like/:id', (req, res, next)=>{
+    const id = req.params.id;
+    pool.query('UPDATE photo SET like_num = like_num + 1 WHERE id = $1', [id], (err, results)=>{
+        if (err) throw res.status(404).send('error');
+        res.status(200).send('success');
+        // res.redirect('/all_photo');
+    })
 })
 
 app.listen(PORT, () =>{
