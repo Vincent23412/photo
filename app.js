@@ -13,6 +13,9 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
+const multer  = require('multer');
+const fs = require('fs');
+
 const pool = new Pool({
     user: process.env.USER,
     host: process.env.HOST,
@@ -36,6 +39,7 @@ app.use(
 )
 app.set("view engine", "ejs");
 app.set('views', path.join(__dirname, 'views'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser()); // 添加这行来解析Cookie
 
@@ -88,6 +92,7 @@ app.post('/login', passport.authenticate('local', {session:false, failureRedirec
     const payload = { id: req.user.id, username: req.user.name }; // 以用户ID作为JWT的主题
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' }); // 设置过期时间为1小时
     // res.json({ token: token , redirectUrl: '/protected', username: req.user.name}); // 发送包含JWT的响应
+    console.log(token);
     res.cookie('token', token, { httpOnly: true });
     res.redirect('/protected');
 })
@@ -109,6 +114,35 @@ app.get('/logout', (req, res) => {
     // 清除名为'token'的JWT Cookie
     res.cookie('token', '', { expires: new Date(0) });
     res.redirect('/'); // 可以重定向到登录页面或主页
+});
+
+// 配置Multer的存储选项
+const storage = multer.diskStorage({
+    destination: (req, file, cb) =>{
+        cb(null, 'uploads/');
+    }, 
+    filename: (req, file, cb) =>{
+        console.log('storage');
+        console.log(req.user);
+        cb(null, req.user.name + '-' + file.fieldname + '-' + Date.now() + file.originalname);
+    }
+})
+
+const upload = multer({storage: storage});
+
+app.post('/upload', passport.authenticate('jwt', {session: false}) , upload.single('file'), (req, res, next)=>{
+    res.send('upload success');
+})
+
+app.get('/all_photo', (req, res, next) => {
+    const uploadDir = path.join(__dirname, 'uploads');
+
+    fs.readdir(uploadDir, (err, files)=>{
+        if (err) return res.status(400).send('error');
+        files.forEach(file => console.log(file));
+    })
+
+    res.status(200).send('success');
 });
 
 app.listen(PORT, () =>{
