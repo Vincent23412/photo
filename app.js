@@ -92,22 +92,25 @@ app.post('/login', passport.authenticate('local', {session:false, failureRedirec
     const payload = { id: req.user.id, username: req.user.name }; // 以用户ID作为JWT的主题
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' }); // 设置过期时间为1小时
     // res.json({ token: token , redirectUrl: '/protected', username: req.user.name}); // 发送包含JWT的响应
-    console.log(token);
+    // console.log(token);
     res.cookie('token', token, { httpOnly: true });
     res.redirect('/protected');
 })
 
 
-app.get('/secret', (req, res, next)=>{
-    res.sendFile(__dirname+'/html/secret.html');
-    // res.status(200).send('secret');
-})
+// app.get('/secret', (req, res, next)=>{
+//     res.sendFile(__dirname+'/html/secret.html');
+//     // res.status(200).send('secret');
+//     // res.render('secret', { name: req.user.name });
+// })
 
-app.get('/protected', passport.authenticate('jwt', { session: false }), (req, res) => {
+app.get('/protected', passport.authenticate('jwt', { session: false , failureRedirect: '/'}), (req, res) => {
     // 如果请求到达这里，说明JWT验证通过
     // res.json({ message: 'This is a protected route.', user: req.user });
-    console.log('protected');
-    res.sendFile(__dirname+'/html/secret.html');
+    // console.log('protected');
+    // console.log(req.user);
+    // res.sendFile(__dirname+'/html/secret.html');
+    res.render('secret', { name: req.user.name });
 });
 
 app.get('/logout', (req, res) => {
@@ -137,7 +140,6 @@ app.post('/upload', passport.authenticate('jwt', {session: false}) , upload.sing
     pool.query('INSERT INTO photo (owner, like_num, link) values ($1, $2, $3);', [req.user.name, 0, req.link],(err, results) =>{
         if (err) return res.status(200).send('error');
         res.redirect('/all_photo');
-
     })
 })
 
@@ -160,6 +162,7 @@ app.get('/get_photo', (req, res, next) => {
     // 去資料庫裡找
     pool.query('SELECT * FROM photo', (err, results) =>{
         // console.log(results.rows);
+        sort_photo(results.rows);
         res.status(200).send(results.rows);
     })
 });
@@ -168,12 +171,47 @@ app.get('/all_photo', (req, res, next)=>{
     res.sendFile(__dirname+'/html/photo.html');
 })
 
-app.get('/like/:id', (req, res, next)=>{
+app.put('/like/:id', (req, res, next) => {
     const id = req.params.id;
-    pool.query('UPDATE photo SET like_num = like_num + 1 WHERE id = $1', [id], (err, results)=>{
-        if (err) throw res.status(404).send('error');
+    pool.query('UPDATE photo SET like_num = like_num + 1 WHERE id = $1', [id], (err, results) => {
+        if (err) {
+            return res.status(404).send('Error updating like number');
+        }
+        res.status(200).send('Success');
+    });
+});
+
+app.get('/register', (req, res, next) =>{
+    res.sendFile(__dirname+'/html/register.html');
+})
+
+app.post('/register', (req, res, next) =>{
+    const name = req.body.username;
+    const account = req;
+    pool.query('INSERT INTO users(name, account, password) VALUES ($1, $2, $3)', [req.body.username, req.body.account, req.body.password], (err, results)=>{
+        if (err){
+            return res.status(404).send('Error');
+        }
+        // res.status(200).send('success');
+        res.redirect('/');
+    })
+})
+
+app.delete('/delete/:id', (req, res, next)=>{
+    const id = req.params.id;
+    console.log(id);
+    pool.query('DELETE FROM photo WHERE id = $1', [id], (err, results)=>{
+        if (err){
+            return res.status(404).send('Error');
+        }
         res.status(200).send('success');
-        // res.redirect('/all_photo');
+    })
+})
+
+app.get('/show_all_photo', passport.authenticate('jwt', {session: false}) ,(req, res, next)=>{
+    pool.query('SELECT * FROM photo WHERE owner = $1', [req.user.name], (err, results)=>{
+        if (err) return res.status(404).send('error');
+        res.status(200).send(results.rows);
     })
 })
 
@@ -202,4 +240,20 @@ const findUserById = async (id, done) =>{
             done(null, false);
         }
     })
+}
+
+
+const sort_photo = (data) =>{
+    // console.log('sort_photo');
+    for (let i = data.length - 1; i > 0; i--){
+        for (let j = 0 ; j < i ; j++){
+            // console.log(data[j]['id']);
+            // console.log('done');
+            if (data[j].like_num < data[j+1].like_num){
+                let temp = data[j];
+                data[j] = data[j+1];
+                data[j+1] = temp;
+            }
+        }
+    }
 }

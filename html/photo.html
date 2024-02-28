@@ -54,13 +54,28 @@
                 const like = document.createElement('button');
                 like.innerText = 'like';
                 block.appendChild(like);
-                like.addEventListener('click', async () => {
-                    fetch('/like/' + element['id'])
-                    .then(res => {
+                // like.addEventListener('click', async () => {
+                //     fetch('/like/' + element['id'])
+                //     .then(res => {
 
+                //         console.log('res');
+                //         console.log(res.ok);
+                //         if (res.ok){
+                //             localStorage.data = 'false';
+                //             update();
+                //         }
+                //     })
+                //     .catch(error => {
+                //         console.error('There has been a problem with your fetch operation:', error);
+                //     });
+                // });
+                like.addEventListener('click', async ()=>{
+                    fetch('/like/' + element['id'], {
+                        method: 'PUT', // 修改请求方法为PUT
+                    })
+                    .then(response => {
                         console.log('res');
-                        console.log(res.ok);
-                        if (res.ok){
+                        if (response.ok){
                             localStorage.data = 'false';
                             update();
                         }
@@ -68,7 +83,7 @@
                     .catch(error => {
                         console.error('There has been a problem with your fetch operation:', error);
                     });
-                });
+                })
             });
         }
 
