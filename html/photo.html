@@ -36,7 +36,7 @@
         const construct = (data) =>{
             data.forEach(element => {
                 const block = document.createElement('div');
-                block.style.display = 'flex';
+                block.style.display = 'block';
                 block.style.justifyContent = 'center';
                 block.style.alignItems = 'center';
                 document.body.appendChild(block);
@@ -45,7 +45,7 @@
                 img.src = '/uploads/' + element['link'];
                 img.style.width = '800px';
                 img.style.height = '600px';
-                img.style.margin = '10px';
+                // img.style.margin = '10px';
                 block.appendChild(img);
                 const name = document.createElement('h1');
                 // console.log(pic.split('-')[0].split('/')[1]);
@@ -54,21 +54,6 @@
                 const like = document.createElement('button');
                 like.innerText = 'like';
                 block.appendChild(like);
-                // like.addEventListener('click', async () => {
-                //     fetch('/like/' + element['id'])
-                //     .then(res => {
-
-                //         console.log('res');
-                //         console.log(res.ok);
-                //         if (res.ok){
-                //             localStorage.data = 'false';
-                //             update();
-                //         }
-                //     })
-                //     .catch(error => {
-                //         console.error('There has been a problem with your fetch operation:', error);
-                //     });
-                // });
                 like.addEventListener('click', async ()=>{
                     fetch('/like/' + element['id'], {
                         method: 'PUT', // 修改请求方法为PUT
@@ -84,6 +69,94 @@
                         console.error('There has been a problem with your fetch operation:', error);
                     });
                 })
+                // fetch('/all_comment/' + element['id'])
+                // .then(res => res.json())
+                // .then(data => {
+                //     console.log(data);
+                //     data.forEach(comment => {
+                //         const comment_block = document.createElement('div');
+                //         comment_block.style.display = 'block';
+                //         comment_block.style.justifyContent = 'center';
+                //         comment_block.style.alignItems = 'center';
+                //         block.appendChild(comment_block);
+                //         const comment_name = document.createElement('div');
+                //         comment_name.innerText = comment['commentor_id'] + ': ' + comment['content'] + '\n';
+                //         comment_block.appendChild(comment_name);
+                //     });
+                // })
+                fetch('/all_comment/' + element['id'])
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data);
+                    data.forEach(comment => {
+                        const comment_block = document.createElement('div');
+                        comment_block.style.display = 'flex'; // 使用 flex 布局
+                        comment_block.style.alignItems = 'center'; // 垂直居中對齊
+                        block.appendChild(comment_block);
+
+                        const comment_name = document.createElement('div');
+                        comment_name.innerText = comment['name'] + ': ' + comment['content'] + '\n';
+                        comment_block.appendChild(comment_name);
+                    });
+
+                    // 在所有留言之後添加留言框
+                    const commentForm = document.createElement('form'); // 創建一個表單用於提交新留言
+                    commentForm.style.display = 'block'; // 使表單為塊級元素
+                    commentForm.style.width = '15%'; // 表單寬度設為 100%
+
+                    const textarea = document.createElement('textarea'); // 創建文本輸入區域
+                    textarea.placeholder = '輸入你的留言...';
+                    textarea.style.width = '100%'; // 設置文本區域寬度為 100%
+                    textarea.style.margin = '10px 0'; // 添加一些外邊距
+
+                    const submitButton = document.createElement('button'); // 創建提交按鈕
+                    submitButton.type = 'submit';
+                    submitButton.innerText = '提交留言';
+                    submitButton.style.marginLeft = '0'; // 按鈕貼齊左側
+
+                    // 將輸入區域和按鈕添加到表單中
+                    commentForm.appendChild(textarea);
+                    commentForm.appendChild(submitButton);
+
+                    // 最後將表單添加到頁面上某個元素中，這裡假設 `block` 是你要添加到的元素
+                    block.appendChild(commentForm);
+
+                    // 可以在這裡添加提交事件的監聽器
+                    commentForm.addEventListener('submit', function(event) {
+                        event.preventDefault(); // 阻止表單默認提交行為
+                        // 在這裡添加你的代碼來處理留言提交，比如使用 fetch API 發送留言數據到服務器
+                        console.log('留言內容：', textarea.value);
+                        fetch('/comment' , {
+                            method: 'POST', // 提交方式
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                content: textarea.value,
+                                photo_id: element['id']
+                            })
+                        })
+                        .then(response => {
+                            console.log('res');
+                            if (response.ok){
+                                localStorage.data = 'false';
+                                update();
+                            }else{
+                                alert('留言失敗！');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('There has been a problem with your fetch operation:', error);
+                            alert('留言失敗！');
+                        });
+                        // 清空輸入框
+                        textarea.value = '';
+
+                    });
+                });
+
+
+                
             });
         }
 

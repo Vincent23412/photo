@@ -92,7 +92,7 @@ app.post('/login', passport.authenticate('local', {session:false, failureRedirec
     const payload = { id: req.user.id, username: req.user.name }; // 以用户ID作为JWT的主题
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' }); // 设置过期时间为1小时
     // res.json({ token: token , redirectUrl: '/protected', username: req.user.name}); // 发送包含JWT的响应
-    // console.log(token);
+    console.log(token);
     res.cookie('token', token, { httpOnly: true });
     res.redirect('/protected');
 })
@@ -214,6 +214,47 @@ app.get('/show_all_photo', passport.authenticate('jwt', {session: false}) ,(req,
         res.status(200).send(results.rows);
     })
 })
+
+app.get('/all_comment/:id', (req, res, next) =>{
+    const id = req.params.id;
+    pool.query('SELECT commentor_id, content, photo_id, name FROM comment JOIN users ON comment.commentor_id = users.id WHERE photo_id = $1', [id], (err, results)=>{
+        if (err) return res.status(404).send('error');
+        res.status(200).send(results.rows);
+    })
+})
+app.post('/comment', (req, res, next) => {
+    passport.authenticate('jwt', {session: false}, (err, user, info) => {
+        // 错误处理
+        if (err) {
+            console.log('Authentication error');
+            return res.status(500).send('Authentication error');
+        }
+        // 用户不存在处理
+        if (!user) {
+            console.log('No user found');
+            return res.status(401).send('No user found');
+        }
+        
+        // 用户验证成功，将用户信息添加到请求对象中
+        req.user = user;
+
+        // 继续处理请求
+        console.log(req.user);
+        const commentor_id = req.user.id;
+        const comment = req.body.content;
+        const photo_id = req.body.photo_id;
+        console.log(commentor_id, comment, photo_id);
+
+        pool.query('INSERT INTO comment (commentor_id, content, photo_id) VALUES($1, $2, $3);', [commentor_id, comment, photo_id], (err, results) => {
+            if (err) {
+                console.error(err); // 在服务器日志中记录错误详情
+                return res.status(500).send('An error occurred while saving the comment');
+            }
+            // 成功处理，这里可以根据需要进行跳转或发送成功响应
+            res.status(201).send('Comment added successfully');
+        });
+    })(req, res, next); // 立即调用这个函数
+});
 
 app.listen(PORT, () =>{
     console.log('listening');
