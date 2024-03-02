@@ -19,6 +19,7 @@ const fs = require('fs');
 const NodeCache = require("node-cache");
 const photoCache = new NodeCache({ stdTTL: 600 });
 
+const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
     user: process.env.USER,
@@ -32,7 +33,6 @@ const pool = new Pool({
 })
 
 const app = express(); 
-PORT = 3000;
 
 app.use(morgan('dev'));
 app.use(express.json());
@@ -295,7 +295,7 @@ app.get('/health', (req, res,next)=>{
 })
 
 app.listen(PORT, () =>{
-    console.log('listening');
+    console.log(`listening on ${PORT}`);
 });
 
 const findUserByName = async (username, done) =>{
