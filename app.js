@@ -16,6 +16,10 @@ const cookieParser = require('cookie-parser');
 const multer  = require('multer');
 const fs = require('fs');
 
+const NodeCache = require("node-cache");
+const photoCache = new NodeCache({ stdTTL: 600 });
+
+
 const pool = new Pool({
     user: process.env.USER,
     host: process.env.HOST,
@@ -208,19 +212,48 @@ app.delete('/delete/:id', (req, res, next)=>{
     })
 })
 
-app.get('/show_all_photo', passport.authenticate('jwt', {session: false}) ,(req, res, next)=>{
-    pool.query('SELECT * FROM photo WHERE owner = $1', [req.user.name], (err, results)=>{
-        if (err) return res.status(404).send('error');
-        res.status(200).send(results.rows);
-    })
-})
+// app.get('/show_all_photo', passport.authenticate('jwt', {session: false}) ,(req, res, next)=>{
+//     pool.query('SELECT * FROM photo WHERE owner = $1', [req.user.name], (err, results)=>{
+//         if (err) return res.status(404).send('error');
+//         res.status(200).send(results.rows);
+//     })
+// })
+app.get('/show_all_photo', passport.authenticate('jwt', {session: false}), (req, res, next) => {
+    const cacheKey = `photos_${req.user.name}`; // 为每个用户创建一个唯一的缓存键
+    const cachedPhotos = photoCache.get(cacheKey);
+
+    if (cachedPhotos) {
+        // 如果缓存命中，直接返回缓存的数据
+        return res.status(200).send(cachedPhotos);
+    } else {
+        // 缓存未命中，从数据库查询
+        pool.query('SELECT * FROM photo WHERE owner = $1', [req.user.name], (err, results) => {
+            if (err) return res.status(404).send('error');
+
+            // 将查询结果存储到缓存中
+            photoCache.set(cacheKey, results.rows);
+
+            // 返回查询结果
+            res.status(200).send(results.rows);
+        });
+    }
+});
 
 app.get('/all_comment/:id', (req, res, next) =>{
     const id = req.params.id;
-    pool.query('SELECT commentor_id, content, photo_id, name FROM comment JOIN users ON comment.commentor_id = users.id WHERE photo_id = $1', [id], (err, results)=>{
-        if (err) return res.status(404).send('error');
-        res.status(200).send(results.rows);
-    })
+    const cacheKey = `comment_${req.params.id}`; 
+    const cachedPhotos = photoCache.get(cacheKey);
+    if (cachedPhotos) {
+        // 如果缓存命中，直接返回缓存的数据
+        return res.status(200).send(cachedPhotos);
+    } else {
+        pool.query('SELECT commentor_id, content, photo_id, name FROM comment JOIN users ON comment.commentor_id = users.id WHERE photo_id = $1', [id], (err, results)=>{
+            if (err) return res.status(404).send('error');
+
+            photoCache.set(cacheKey, results.rows);
+
+            res.status(200).send(results.rows);
+    })}
 })
 app.post('/comment', (req, res, next) => {
     passport.authenticate('jwt', {session: false}, (err, user, info) => {
@@ -255,6 +288,10 @@ app.post('/comment', (req, res, next) => {
         });
     })(req, res, next); // 立即调用这个函数
 });
+
+app.get('/health', (req, res,next)=>{
+    res.status(200).send('health');
+})
 
 app.listen(PORT, () =>{
     console.log('listening');
