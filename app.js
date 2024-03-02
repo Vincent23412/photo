@@ -89,6 +89,7 @@ passport.use(new JwtStrategy(opts, (jwt_payload, done) => {
 }));
 
 app.get('/', (req, res, next)=>{
+    console.log('/');
     res.sendFile(__dirname+'/html/index.html');
 })
 
